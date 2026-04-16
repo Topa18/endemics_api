@@ -13,3 +13,11 @@ class AnimalSerializer(serializers.ModelSerializer):
             'conservation_status': {'required': False},
             'image': {'required': False}
         }
+
+
+class AnimalCountQuerySerializer(serializers.Serializer):
+    count = serializers.IntegerField(
+        default=1,
+        min_value=1,
+        max_value=5
+    )
