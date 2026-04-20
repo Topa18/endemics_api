@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.generics import GenericAPIView
 from rest_framework.views import APIView
 from rest_framework.mixins import RetrieveModelMixin, ListModelMixin, DestroyModelMixin
@@ -13,13 +14,37 @@ from .models import Animal
 from.serializers import AnimalSerializer, AnimalCountQuerySerializer
 
 
+tags = ['Species']
+
 class AnimalView(GenericAPIView, ListModelMixin, DestroyModelMixin):
     queryset = Animal.objects.all()
     serializer_class = AnimalSerializer
 
+    @extend_schema(
+            summary="Get endemics list",
+            description="Endpoint allows user to get list of all collected species",
+            tags=tags
+    )
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
+    @extend_schema(
+            summary='Collect new species',
+            description="Allows user to collect new species" \
+            "from external API",
+            tags=tags,
+            request=AnimalCountQuerySerializer,
+            parameters=[
+                OpenApiParameter(
+                    name='count',
+                    location=OpenApiParameter.QUERY,
+                    description='Specifies how many objects, request receives',
+                    required=False,
+                    default=1,
+                    type=int
+                )
+            ]
+    )
     def post(self, request, *args, **kwargs):
         query_serializer = AnimalCountQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
@@ -59,7 +84,7 @@ class AnimalView(GenericAPIView, ListModelMixin, DestroyModelMixin):
                                             status=status.HTTP_204_NO_CONTENT)
                         return Response(data={'data': collected_data,
                                               'message': f'Collected {len(collected_data)}/{count}. Cooldown. Try again later',
-                                              'count': f'Own data: {len(existing_names)}/External data: {spieces_count}'},
+                                              'count': f'Own data: {len(existing_names)}. External data: {spieces_count}'},
                                         status=status.HTTP_206_PARTIAL_CONTENT)
                     continue
 
@@ -69,9 +94,15 @@ class AnimalView(GenericAPIView, ListModelMixin, DestroyModelMixin):
         return Response(data={'data': collected_data,
                               'message': f'{tries} coincedence occured. '\
                                          f'{len(collected_data)}/{count} objects collected',
-                              'count': f'Own data: {len(existing_names)}/External data: {spieces_count}'},
+                              'count': f'Own data: {len(existing_names)}. External data: {spieces_count}'},
                         status=status.HTTP_201_CREATED)
 
+    @extend_schema(
+            summary="Clear all species data",
+            description="Allows user to delete all species in own DB",
+            tags=tags,
+            operation_id='animal_clear'
+    )
     def delete(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         for obj in queryset:
@@ -92,9 +123,19 @@ class AnimalDetailView(GenericAPIView, RetrieveModelMixin, DestroyModelMixin):
     queryset = Animal.objects.all()
     serializer_class = AnimalSerializer
 
+    @extend_schema(
+            summary="Get species by ID",
+            description="Allows users to retrieve current species by it`s ID",
+            tags=tags
+    )
     def get(self, request, *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)
     
+    @extend_schema(
+        summary="Delete species by ID",
+        description="Allows users to delete current species by it`s ID",
+        tags=tags
+    )
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
 
