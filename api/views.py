@@ -25,47 +25,67 @@ class AnimalView(GenericAPIView, ListModelMixin, DestroyModelMixin):
         query_serializer.is_valid(raise_exception=True)
         count = query_serializer.validated_data['count']
 
-        own_data = self.get_queryset()
+        existing_names = set(self.get_queryset().values_list('common_name', flat=True))
         tries = 0
+        tries_limit = count * 2
+        spieces_count = self.max_requests()
+
+        if len(existing_names) == spieces_count:
+            return Response(data={'message': 'All spieces collected'},
+                            status=status.HTTP_204_NO_CONTENT)
 
         collected_data = []
         while len(collected_data) < count:
+            
             load_dotenv()
-            retry = 0
             try:
                 r = requests.get(url=os.getenv("URL"), timeout=10)
             except requests.RequestException as e:
-                return Response(data={'error': 'External API Error. Try again later '}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response(data={'error': 'External API Error. Try again later '},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             source_data = r.json()
             serializer = self.get_serializer(data=source_data)
             if serializer.is_valid():
-                for data in own_data:
-                    if data.common_name == serializer.validated_data.get('common_name'):
-
-                        # LOG
-                        print('exists!')
-                        print(serializer.validated_data.get('common_name'))
-                        # LOG
-
-                        retry = 1
-                        tries += 1
-                        break
-                if tries >= 15:
-                    return Response(data={'message': 'All spieces collected (> 15 coincedences)'}, 
-                                    status=status.HTTP_204_NO_CONTENT)
-                if retry:
-                    continue            
+                new_data = serializer.validated_data.get('common_name')
+                if new_data in existing_names:
+                    print(f'{new_data} exists!')       # LOG!
+                    tries += 1
+                    if tries >= tries_limit:
+                        if not collected_data:
+                            return Response(data={'data': collected_data,
+                                                  'message': 'Cooldown. Try again later.',
+                                                  'count': f'Own data: {len(existing_names)}/External data: {spieces_count}'}, 
+                                            status=status.HTTP_204_NO_CONTENT)
+                        return Response(data={'data': collected_data,
+                                              'message': f'Collected {len(collected_data)}/{count}. Cooldown. Try again later',
+                                              'count': f'Own data: {len(existing_names)}/External data: {spieces_count}'},
+                                        status=status.HTTP_206_PARTIAL_CONTENT)
+                    continue
 
                 serializer.save()
                 collected_data.append(serializer.data)
-        return Response(collected_data, status=status.HTTP_201_CREATED)
+
+        return Response(data={'data': collected_data,
+                              'message': f'{tries} coincedence occured. '\
+                                         f'{len(collected_data)}/{count} objects collected',
+                              'count': f'Own data: {len(existing_names)}/External data: {spieces_count}'},
+                        status=status.HTTP_201_CREATED)
 
     def delete(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         for obj in queryset:
             obj.delete()
         return Response(data=None, status=status.HTTP_204_NO_CONTENT) 
+    
+    def max_requests(self):
+        try:
+            r = requests.get(url=os.getenv('MAX_URL'), timeout=10)
+            data = r.json()
+            return data.get('count')
+        except requests.RequestException as e:
+            return Response(data={'error': 'External API Error. Try again later '},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AnimalDetailView(GenericAPIView, RetrieveModelMixin, DestroyModelMixin):
