@@ -134,7 +134,7 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Endemics API",
-    "DESCRIPTION": "Этот API не несет конкретной пользы. Он является реализацией"\
+    "DESCRIPTION": "Этот API не несет конкретной пользы. Он является реализацией "\
                    "тестового технического задания",
     "VERSION": "1.0.0", 
     "SERVE_INCLUDE_SCHEMA": False, 
