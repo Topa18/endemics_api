@@ -38,7 +38,7 @@ class AnimalView(GenericAPIView, ListModelMixin, DestroyModelMixin):
                 OpenApiParameter(
                     name='count',
                     location=OpenApiParameter.QUERY,
-                    description='Specifies how many objects, request receives',
+                    description='Specifies how many objects, request receives (max=5)',
                     required=False,
                     default=1,
                     type=int
@@ -80,10 +80,10 @@ class AnimalView(GenericAPIView, ListModelMixin, DestroyModelMixin):
                         if not collected_data:
                             return Response(data={'data': collected_data,
                                                   'message': 'Cooldown. Try again later.',
-                                                  'count': f'Own data: {len(existing_names)}/External data: {spieces_count}'}, 
+                                                  'count': f'Own data: {len(existing_names) + len(collected_data)}/External data: {spieces_count}'}, 
                                             status=status.HTTP_204_NO_CONTENT)
                         return Response(data={'data': collected_data,
-                                              'message': f'Collected {len(collected_data)}/{count}. Cooldown. Try again later',
+                                              'message': f'Collected {len(collected_data) + len(collected_data)}/{count}. Cooldown. Try again later',
                                               'count': f'Own data: {len(existing_names)}. External data: {spieces_count}'},
                                         status=status.HTTP_206_PARTIAL_CONTENT)
                     continue
