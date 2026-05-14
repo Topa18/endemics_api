@@ -79,12 +79,10 @@ class AnimalView(GenericAPIView, ListModelMixin, DestroyModelMixin):
                     if tries >= tries_limit:
                         if not collected_data:
                             return Response(data={'data': collected_data,
-                                                  'message': 'Cooldown. Try again later.',
-                                                  'count': f'Own data: {len(existing_names) + len(collected_data)}/External data: {spieces_count}'}, 
+                                                  'message': 'Cooldown. Try again later.'}, 
                                             status=status.HTTP_204_NO_CONTENT)
                         return Response(data={'data': collected_data,
-                                              'message': f'Collected {len(collected_data) + len(collected_data)}/{count}. Cooldown. Try again later',
-                                              'count': f'Own data: {len(existing_names)}. External data: {spieces_count}'},
+                                              'message': f'Collected {len(collected_data) + len(collected_data)}/{count}. Cooldown. Try again later'},
                                         status=status.HTTP_206_PARTIAL_CONTENT)
                     continue
 
@@ -93,8 +91,7 @@ class AnimalView(GenericAPIView, ListModelMixin, DestroyModelMixin):
 
         return Response(data={'data': collected_data,
                               'message': f'{tries} coincedence occured. '\
-                                         f'{len(collected_data)}/{count} objects collected',
-                              'count': f'Own data: {len(existing_names)}. External data: {spieces_count}'},
+                                         f'{len(collected_data)}/{count} objects collected'},
                         status=status.HTTP_201_CREATED)
 
     @extend_schema(
